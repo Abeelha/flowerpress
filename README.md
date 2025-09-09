@@ -1,6 +1,6 @@
 # FlowerPress 🌸
 
-A **Substack/Notion-style cloud editor for markdown-based [data-rich documents](https://datarichdocuments.com/) and datasets** compatible with [Flowershow.app](https://flowershow.app).
+A **Substack/Notion-style cloud editor for markdown-based [data-rich documents](https://datarichdocs.com/) and datasets** compatible with [Flowershow.app](https://flowershow.app).
 
 * Primary focus: making it effortless to curate and publish datasets and associated commentary.  
 * Medium-term vision: a **general-purpose editor for markdown-based rich documents**, which can include datasets, tables, charts, and other content.
