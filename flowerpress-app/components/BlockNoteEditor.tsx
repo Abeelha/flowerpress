@@ -1,23 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
 import { useTheme } from '@/contexts/theme-context'
+import { editorAPI } from '@/lib/api'
 import '@blocknote/mantine/style.css'
-
-// Mock asset upload function - we'll implement the real API later
-const uploadAsset = async (file: File): Promise<{url: string, relPath: string}> => {
-  // Generate a content-addressed filename like the design specifies
-  const hash = Math.random().toString(36).substr(2, 8)
-  const ext = file.name.split('.').pop() || ''
-  const baseName = file.name.replace(/\.[^/.]+$/, '')
-
-  return {
-    url: `/assets/${baseName}-${hash}.${ext}`,
-    relPath: `./assets/${baseName}-${hash}.${ext}`
-  }
-}
 
 interface BlockNoteEditorProps {
   value: string
@@ -26,44 +14,97 @@ interface BlockNoteEditorProps {
 
 export default function BlockNoteEditor({ value, onChange }: BlockNoteEditorProps) {
   const { theme } = useTheme()
+  const [isInitialized, setIsInitialized] = useState(false)
+  const [lastValue, setLastValue] = useState(value)
+  const isUpdatingFromProps = useRef(false)
 
+  // Mock asset upload integrated with our storage system
+  const uploadAsset = useCallback(async (file: File): Promise<string> => {
+    try {
+      // Use our mock storage system
+      const result = await editorAPI.saveAsset(file, 'default-space', 'current-doc')
+      return result.url
+    } catch (error) {
+      console.error('Failed to upload asset:', error)
+      // Fallback to object URL for images
+      if (file.type.startsWith('image/')) {
+        return URL.createObjectURL(file)
+      }
+      throw error
+    }
+  }, [])
+
+  // Create editor with stable configuration
   const editor = useCreateBlockNote({
-    initialContent: value ? undefined : [
+    initialContent: [
       {
         type: "paragraph",
         content: "Start writing your document..."
       }
     ],
-    uploadFile: async (file: File) => {
-      const result = await uploadAsset(file)
-      return result.url
-    }
+    uploadFile: uploadAsset
   })
 
-  // Convert markdown to blocks on mount and when value changes
-  React.useEffect(() => {
-    if (value && editor) {
-      const parseMarkdown = async () => {
-        try {
-          const blocks = await editor.tryParseMarkdownToBlocks(value)
-          editor.replaceBlocks(editor.document, blocks)
-        } catch (error) {
-          console.warn('Failed to parse markdown:', error)
-        }
-      }
-      parseMarkdown()
-    }
-  }, [value, editor])
+  // Initialize editor content only once or when document changes significantly
+  useEffect(() => {
+    if (!editor || isUpdatingFromProps.current) return
 
-  const handleChange = async () => {
-    if (editor) {
+    const initializeContent = async () => {
       try {
-        const markdown = await editor.blocksToMarkdownLossy(editor.document)
-        onChange(markdown)
+        if (value && value !== lastValue) {
+          setLastValue(value)
+
+          // Only update if the value has changed significantly
+          if (value.trim()) {
+            const blocks = await editor.tryParseMarkdownToBlocks(value)
+            isUpdatingFromProps.current = true
+            editor.replaceBlocks(editor.document, blocks)
+            isUpdatingFromProps.current = false
+          }
+        }
+
+        if (!isInitialized) {
+          setIsInitialized(true)
+        }
       } catch (error) {
-        console.error('Failed to convert to markdown:', error)
+        console.warn('Failed to initialize editor content:', error)
+        isUpdatingFromProps.current = false
+        setIsInitialized(true)
       }
     }
+
+    initializeContent()
+  }, [value, editor, isInitialized, lastValue])
+
+  // Handle changes from the editor
+  const handleChange = useCallback(async () => {
+    if (!editor || isUpdatingFromProps.current || !isInitialized) return
+
+    try {
+      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+
+      // Only call onChange if the content actually changed
+      if (markdown !== lastValue) {
+        setLastValue(markdown)
+        onChange(markdown)
+      }
+    } catch (error) {
+      console.error('Failed to convert blocks to markdown:', error)
+    }
+  }, [editor, onChange, lastValue, isInitialized])
+
+  // Error boundary for block operations
+  const handleError = useCallback((error: Error) => {
+    console.error('BlockNote editor error:', error)
+    // Don't crash the app, just log the error
+  }, [])
+
+  if (!editor) {
+    return (
+      <div className="h-full w-full flex items-center justify-center text-gray-500">
+        Loading editor...
+      </div>
+    )
   }
 
   return (

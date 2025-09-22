@@ -15,8 +15,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 export default function Home() {
   const [spaceId] = useState('default-space')
   const [currentDoc, setCurrentDoc] = useState<Document | null>(null)
-  const [isPublishing, setIsPublishing] = useState(false)
-  const [publishUrl, setPublishUrl] = useState<string | null>(null)
+  const [documents, setDocuments] = useState<Document[]>([])
   const [newDocModal, setNewDocModal] = useState<{ isOpen: boolean, folderId?: string }>({ isOpen: false })
   const [unsavedConfirm, setUnsavedConfirm] = useState<{ isOpen: boolean, pendingDoc: Document | null }>({ isOpen: false, pendingDoc: null })
   const [isCreatingDocument, setIsCreatingDocument] = useState(false)
@@ -54,6 +53,7 @@ The backend is completely mocked - all saves are logged and displayed so you can
       updatedAt: new Date()
     }
 
+    setDocuments([defaultDoc])
     setCurrentDoc(defaultDoc)
   }, [spaceId])
 
@@ -69,21 +69,6 @@ The backend is completely mocked - all saves are logged and displayed so you can
     }
   }
 
-  const handlePublish = async () => {
-    if (!currentDocument?.markdown || !currentDoc) return
-
-    setIsPublishing(true)
-    try {
-      await editorAPI.saveMarkdown(spaceId, currentDoc.slug, currentDocument.markdown)
-      const url = `${window.location.origin}/view/${spaceId}/${currentDoc.slug}`
-      setPublishUrl(url)
-      toast.success('Document published successfully!')
-    } catch (error) {
-      toast.error('Failed to publish document')
-    } finally {
-      setIsPublishing(false)
-    }
-  }
 
   const handleDocumentSelect = (doc: Document) => {
     if (hasUnsavedChanges) {
@@ -91,19 +76,17 @@ The backend is completely mocked - all saves are logged and displayed so you can
       return
     }
     setCurrentDoc(doc)
-    setPublishUrl(null)
   }
 
   const handleDocumentUpdate = (updatedDoc: Document) => {
     setCurrentDoc(updatedDoc)
-    // Trigger sidebar refresh to show updated title
-    window.dispatchEvent(new CustomEvent('refresh-sidebar'))
+    // Update the document in the documents list
+    setDocuments(prev => prev.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc))
   }
 
   const handleUnsavedConfirm = () => {
     if (unsavedConfirm.pendingDoc) {
       setCurrentDoc(unsavedConfirm.pendingDoc)
-      setPublishUrl(null)
       setHasUnsavedChanges(false)
     }
     setUnsavedConfirm({ isOpen: false, pendingDoc: null })
@@ -118,22 +101,12 @@ The backend is completely mocked - all saves are logged and displayed so you can
 
     try {
       setIsCreatingDocument(true)
-      const response = await fetch(`/api/spaces/${spaceId}/documents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), folderId: newDocModal.folderId })
-      })
+      const newDoc = await editorAPI.createDocument(spaceId, title.trim(), newDocModal.folderId)
 
-      if (response.ok) {
-        const newDoc = await response.json()
-        setCurrentDoc(newDoc)
-        toast.success('Document created')
-        // Trigger sidebar refresh
-        window.dispatchEvent(new CustomEvent('refresh-sidebar'))
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to create document')
-      }
+      // Add to documents list
+      setDocuments(prev => [...prev, newDoc])
+      setCurrentDoc(newDoc)
+      toast.success('Document created')
     } catch (error) {
       console.error('Document creation error:', error)
       toast.error('Failed to create document')
@@ -145,12 +118,53 @@ The backend is completely mocked - all saves are logged and displayed so you can
 
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors">
-      <Sidebar
-        spaceId={spaceId}
-        currentDocId={currentDoc?.id}
-        onDocumentSelect={handleDocumentSelect}
-        onNewDocument={handleNewDocument}
-      />
+      {/* Flowerpress Header */}
+      <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">🌸</div>
+            <div>
+              <h1 className="font-bold text-lg text-gray-900 dark:text-white">Flowerpress</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Headless Editor</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Documents</h2>
+              <button
+                onClick={() => setNewDocModal({ isOpen: true })}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                title="New document"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Documents list */}
+            <div className="space-y-1">
+              {documents.map(doc => (
+                <div
+                  key={doc.id}
+                  className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer ${
+                    currentDoc?.id === doc.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                  }`}
+                  onClick={() => setCurrentDoc(doc)}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-sm">{doc.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 flex flex-col">
         <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3">
@@ -175,31 +189,11 @@ The backend is completely mocked - all saves are logged and displayed so you can
               >
                 Save
               </button>
-              <button
-                onClick={handlePublish}
-                disabled={isPublishing || !currentDoc}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isPublishing ? 'Publishing...' : 'Publish'}
-              </button>
             </div>
           </div>
-          {publishUrl && (
-            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md text-sm">
-              Document published at:{' '}
-              <a
-                href={publishUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline font-medium"
-              >
-                {publishUrl}
-              </a>
-            </div>
-          )}
         </header>
 
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 min-h-0">
           {currentDoc ? (
             <div className="h-full">
               <SplitScreenEditor

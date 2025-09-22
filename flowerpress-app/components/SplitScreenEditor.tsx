@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import CodeMirrorEditor, { MarkdownPreview } from './CodeMirrorEditor'
 import BlockNoteEditor from './BlockNoteEditor'
 import FileDropZone from './FileDropZone'
+import ErrorBoundary from './ErrorBoundary'
 import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -33,7 +34,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
     setMarkdown(document.markdown || '')
     setDocument(document)
     setHasUnsavedChanges(false)
-  }, [document, setDocument, setHasUnsavedChanges])
+  }, [document.id, setDocument, setHasUnsavedChanges]) // Use document.id to ensure proper reinitialization
 
   // Load fresh content from server
   const loadDocumentContent = useCallback(async () => {
@@ -214,24 +215,20 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
           >
             ↻
           </button>
-          <button
-            onClick={handleSave}
-            disabled={!hasUnsavedChanges}
-            className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Save
-          </button>
         </div>
       </div>
 
       {/* Editor Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         {viewMode === 'rich' && (
           <div className="h-full">
-            <BlockNoteEditor
-              value={markdown}
-              onChange={handleMarkdownChange}
-            />
+            <ErrorBoundary>
+              <BlockNoteEditor
+                key={document.id}
+                value={markdown}
+                onChange={handleMarkdownChange}
+              />
+            </ErrorBoundary>
           </div>
         )}
 
@@ -243,7 +240,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
                 onChange={handleMarkdownChange}
               />
             </div>
-            <div className="w-1/2 overflow-auto">
+            <div className="w-1/2 overflow-y-auto">
               <div className="p-4">
                 <MarkdownPreview markdown={markdown} />
               </div>
@@ -261,7 +258,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
         )}
 
         {viewMode === 'preview' && (
-          <div className="h-full overflow-auto">
+          <div className="h-full overflow-y-auto">
             <div className="p-4">
               <MarkdownPreview markdown={markdown} />
             </div>

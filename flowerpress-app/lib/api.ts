@@ -41,6 +41,18 @@ export const editorAPI = {
     return response.data
   },
 
+  async createDocument(spaceId: string, title: string, folderId?: string): Promise<any> {
+    if (USE_MOCK_STORAGE) {
+      return await mockStorage.createDocument(spaceId, title, folderId)
+    }
+
+    const response = await api.post(`/spaces/${spaceId}/documents`, {
+      title,
+      folderId
+    })
+    return response.data
+  },
+
   async saveAsset(file: File, spaceId: string, docSlug: string): Promise<{ url: string; path: string }> {
     const path = `${spaceId}/${docSlug}/assets/${file.name}`
 

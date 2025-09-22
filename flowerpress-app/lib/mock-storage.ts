@@ -3,6 +3,54 @@ import { StorageBackend, SaveEvent, emitSaveEvent } from './storage-interface'
 
 class MockStorageBackend implements StorageBackend {
   private documents = new Map<string, { markdown: string; version: string }>()
+  private documentMeta = new Map<string, any>() // Store document metadata
+
+  async createDocument(spaceId: string, title: string, folderId?: string): Promise<any> {
+    const docId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `doc-${Date.now()}`
+
+    const document = {
+      id: docId,
+      spaceId,
+      slug,
+      title: title.trim(),
+      markdown: `# ${title.trim()}\n\nStart writing your document here...\n`,
+      folderId,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+
+    // Store document metadata
+    this.documentMeta.set(docId, document)
+
+    // Store initial markdown content
+    const key = `${spaceId}/${slug}`
+    this.documents.set(key, {
+      markdown: document.markdown,
+      version: Date.now().toString()
+    })
+
+    // Emit save event for display
+    emitSaveEvent({
+      timestamp: new Date(),
+      type: 'markdown',
+      action: 'save',
+      data: {
+        spaceId,
+        docSlug: slug,
+        markdown: document.markdown,
+        version: Date.now().toString(),
+        etag: `etag-${Date.now()}`,
+        size: new Blob([document.markdown]).size,
+        action: 'create',
+        title: document.title
+      }
+    })
+
+    console.log(`📝 Document created: ${title} (${slug})`)
+
+    return document
+  }
 
   async saveMarkdown(spaceId: string, docSlug: string, markdown: string): Promise<{ version: string; etag: string }> {
     const version = Date.now().toString()
