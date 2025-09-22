@@ -5,6 +5,7 @@ import Editor from '@/components/Editor'
 import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function Home() {
   const [spaceId] = useState('default-space')
@@ -42,23 +43,24 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="border-b bg-white px-6 py-3">
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors">
+      <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">🌸 FlowerPress</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">🌸 FlowerPress</h1>
             {hasUnsavedChanges && !isSaving && (
-              <span className="text-sm text-gray-500">• Unsaved changes</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">• Unsaved changes</span>
             )}
             {isSaving && (
-              <span className="text-sm text-gray-500">• Saving...</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">• Saving...</span>
             )}
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <button
               onClick={handleSave}
               disabled={!hasUnsavedChanges || isSaving}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Save
             </button>
@@ -72,7 +74,7 @@ export default function Home() {
           </div>
         </div>
         {publishUrl && (
-          <div className="mt-2 p-2 bg-green-50 text-green-800 rounded-md text-sm">
+          <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md text-sm">
             Document published at:{' '}
             <a
               href={publishUrl}
@@ -86,7 +88,7 @@ export default function Home() {
         )}
       </header>
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden bg-white dark:bg-gray-900">
         <div className="h-full max-w-5xl mx-auto p-6">
           <Editor spaceId={spaceId} docSlug={docSlug} />
         </div>

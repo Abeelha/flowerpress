@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storage } from '@/lib/storage'
+import { serverStorage } from '@/lib/server-storage'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { spaceId, slug } = params
-    const result = await storage.getMarkdown(spaceId, slug)
+    const result = await serverStorage.getMarkdown(spaceId, slug)
     return NextResponse.json(result)
   } catch (error) {
     return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(
       )
     }
 
-    const result = await storage.saveMarkdown(spaceId, slug, markdown)
+    const result = await serverStorage.saveMarkdown(spaceId, slug, markdown)
     return NextResponse.json(result)
   } catch (error) {
     return NextResponse.json(

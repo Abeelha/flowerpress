@@ -91,7 +91,7 @@ export default function CsvTable({ csvUrl }: CsvTableProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500">Loading CSV data...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading CSV data...</div>
       </div>
     )
   }
@@ -99,30 +99,30 @@ export default function CsvTable({ csvUrl }: CsvTableProps) {
   if (error) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-red-500 dark:text-red-400">Error: {error}</div>
       </div>
     )
   }
 
   return (
-    <div className="w-full overflow-x-auto border rounded-lg">
-      <div className="p-4 border-b">
+    <div className="w-full overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <input
           type="text"
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           placeholder="Search..."
-          className="px-4 py-2 border rounded-md w-full max-w-sm"
+          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full max-w-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         />
       </div>
       <table className="w-full">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id} className="border-b bg-gray-50">
+            <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-4 py-2 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={header.column.getToggleSortingHandler()}
                 >
                   <div className="flex items-center gap-2">
@@ -140,9 +140,9 @@ export default function CsvTable({ csvUrl }: CsvTableProps) {
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="border-b hover:bg-gray-50">
+            <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-2">
+                <td key={cell.id} className="px-4 py-2 text-gray-900 dark:text-gray-100">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -150,7 +150,7 @@ export default function CsvTable({ csvUrl }: CsvTableProps) {
           ))}
         </tbody>
       </table>
-      <div className="p-4 text-sm text-gray-600">
+      <div className="p-4 text-sm text-gray-600 dark:text-gray-400">
         Showing {table.getFilteredRowModel().rows.length} of {data.length} rows
       </div>
     </div>

@@ -8,6 +8,7 @@ import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { useDropzone } from 'react-dropzone'
+import { useTheme } from '@/contexts/theme-context'
 
 interface EditorProps {
   spaceId: string
@@ -15,6 +16,7 @@ interface EditorProps {
 }
 
 export default function Editor({ spaceId, docSlug }: EditorProps) {
+  const { theme } = useTheme()
   const {
     currentDocument,
     setDocument,
@@ -154,14 +156,14 @@ export default function Editor({ spaceId, docSlug }: EditorProps) {
     <div {...getRootProps()} className="h-full relative">
       <input {...getInputProps()} />
       {isDragActive && (
-        <div className="absolute inset-0 bg-blue-50 bg-opacity-90 z-50 flex items-center justify-center">
-          <p className="text-2xl text-blue-600">Drop files here...</p>
+        <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900 bg-opacity-90 dark:bg-opacity-90 z-50 flex items-center justify-center">
+          <p className="text-2xl text-blue-600 dark:text-blue-300">Drop files here...</p>
         </div>
       )}
       <BlockNoteView
         editor={editor}
-        theme="light"
-        className="min-h-screen"
+        theme={theme}
+        className="min-h-screen dark:bg-gray-900"
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storage } from '@/lib/storage'
+import { serverStorage } from '@/lib/server-storage'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { spaceId, slug } = params
-    const assets = await storage.listAssets(spaceId, slug)
+    const assets = await serverStorage.listAssets(spaceId, slug)
     return NextResponse.json(assets)
   } catch (error) {
     return NextResponse.json(
@@ -42,7 +42,7 @@ export async function POST(
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const result = await storage.uploadAsset(spaceId, slug, {
+    const result = await serverStorage.uploadAsset(spaceId, slug, {
       name: file.name,
       content: buffer,
       contentType: file.type
