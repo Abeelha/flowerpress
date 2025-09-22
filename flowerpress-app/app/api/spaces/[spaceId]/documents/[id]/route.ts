@@ -55,12 +55,21 @@ export async function DELETE(
       // Delete the markdown file from filesystem
       const filePath = path.join(process.cwd(), '.flowerpress-storage', 'spaces', spaceId, document.slug, 'README.md')
       try {
+        // Check if file exists before trying to delete
+        await fs.access(filePath)
         await fs.unlink(filePath)
+
         // Try to remove the document directory if empty
         const dirPath = path.dirname(filePath)
-        await fs.rmdir(dirPath).catch(() => {})
+        try {
+          await fs.rmdir(dirPath)
+        } catch (dirError) {
+          // Directory might not be empty or might not exist
+          console.log('Could not remove directory:', dirError)
+        }
       } catch (error) {
-        console.log('File might not exist:', error)
+        // File doesn't exist, which is fine for deletion
+        console.log('File already deleted or never existed:', filePath)
       }
     }
 

@@ -14,8 +14,8 @@ if (!globalDB.flowerpressDB) {
 // Helper function to generate unique slug
 function generateUniqueSlug(spaceId: string, baseTitle: string): string {
   const baseSlug = baseTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-  const existingDocs = Array.from(globalDB.flowerpressDB.documents.values())
-    .filter((d: Document) => d.spaceId === spaceId)
+  const allDocs = Array.from(globalDB.flowerpressDB.documents.values()) as Document[]
+  const existingDocs = allDocs.filter((d: Document) => d.spaceId === spaceId)
 
   // Check if base slug exists
   let slug = baseSlug
@@ -80,8 +80,8 @@ export async function GET(
 ) {
   try {
     const { spaceId } = params
-    const documents = Array.from(globalDB.flowerpressDB.documents.values())
-      .filter((d: Document) => d.spaceId === spaceId)
+    const allDocs = Array.from(globalDB.flowerpressDB.documents.values()) as Document[]
+    const documents = allDocs.filter((d: Document) => d.spaceId === spaceId)
 
     return NextResponse.json(documents)
   } catch (error) {

@@ -1,32 +1,26 @@
-import axios from 'axios'
-import { Document, Asset, UploadResponse, SaveMarkdownResponse } from '@/types'
+import { SaveMarkdownResponse } from '@/types'
 
-const api = axios.create({
-  baseURL: '/api'
-})
+const api = {
+  async post(url: string, data: any) {
+    const response = await fetch(`/api${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    return { data: await response.json() }
+  },
+
+  async get(url: string) {
+    const response = await fetch(`/api${url}`)
+    return { data: await response.json() }
+  }
+}
 
 export const editorAPI = {
   async saveMarkdown(spaceId: string, docSlug: string, markdown: string): Promise<SaveMarkdownResponse> {
     const response = await api.post(`/spaces/${spaceId}/docs/${docSlug}/markdown`, {
       markdown
     })
-    return response.data
-  },
-
-  async uploadAsset(spaceId: string, docSlug: string, file: File): Promise<UploadResponse> {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await api.post(`/spaces/${spaceId}/docs/${docSlug}/assets`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-    return response.data
-  },
-
-  async listAssets(spaceId: string, docSlug: string): Promise<Asset[]> {
-    const response = await api.get(`/spaces/${spaceId}/docs/${docSlug}/assets`)
     return response.data
   },
 

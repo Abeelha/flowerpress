@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Editor from '@/components/Editor'
+import SplitScreenEditor from '@/components/SplitScreenEditor'
 import Sidebar from '@/components/Sidebar'
 import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
@@ -29,16 +29,7 @@ export default function Home() {
         const response = await fetch(`/api/spaces/${spaceId}/documents`)
         const documents = await response.json()
 
-        if (documents.length === 0) {
-          // Create a default document if none exist
-          const createResponse = await fetch(`/api/spaces/${spaceId}/documents`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'Welcome to FlowerPress' })
-          })
-          const newDoc = await createResponse.json()
-          setCurrentDoc(newDoc)
-        } else {
+        if (documents.length > 0) {
           setCurrentDoc(documents[0])
         }
       } catch (error) {
@@ -187,8 +178,8 @@ export default function Home() {
 
         <main className="flex-1 overflow-hidden">
           {currentDoc ? (
-            <div className="h-full p-6">
-              <Editor key={currentDoc.id} spaceId={spaceId} docSlug={currentDoc.slug} />
+            <div className="h-full">
+              <SplitScreenEditor key={currentDoc.id} spaceId={spaceId} docSlug={currentDoc.slug} />
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-gray-400">

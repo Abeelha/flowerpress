@@ -45,8 +45,8 @@ export async function POST(
     const result = await serverStorage.saveMarkdown(spaceId, slug, markdown)
 
     // Update the in-memory database
-    const existingDoc = Array.from(globalDB.flowerpressDB.documents.values())
-      .find((d: Document) => d.spaceId === spaceId && d.slug === slug)
+    const allDocs = Array.from(globalDB.flowerpressDB.documents.values()) as Document[]
+    const existingDoc = allDocs.find((d: Document) => d.spaceId === spaceId && d.slug === slug)
 
     if (existingDoc) {
       existingDoc.markdown = markdown

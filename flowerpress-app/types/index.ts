@@ -33,23 +33,6 @@ export type FileSystemItem = {
   item: Folder | Document
 }
 
-export interface Asset {
-  spaceId: string
-  docId: string
-  relPath: string
-  url: string
-  mediaType: string
-  size: number
-  hash: string
-  updatedAt: Date
-}
-
-export interface UploadResponse {
-  url: string
-  relPath: string
-  mediaType: string
-  hash: string
-}
 
 export interface SaveMarkdownResponse {
   version: string
