@@ -74,10 +74,10 @@ export async function GET(
     // Sync documents from filesystem
     await syncDocumentsFromFilesystem(spaceId)
 
-    const folders = Array.from(globalDB.flowerpressDB.folders.values())
+    const folders = (Array.from(globalDB.flowerpressDB.folders.values()) as Folder[])
       .filter((f: Folder) => f.spaceId === spaceId)
 
-    const documents = Array.from(globalDB.flowerpressDB.documents.values())
+    const documents = (Array.from(globalDB.flowerpressDB.documents.values()) as Document[])
       .filter((d: Document) => d.spaceId === spaceId)
 
     return NextResponse.json({

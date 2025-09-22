@@ -39,6 +39,7 @@ export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEdito
           title: content?.split('\n')[0]?.replace(/^#\s*/, '') || 'Untitled Document',
           markdown: content || '',
           version,
+          createdAt: new Date(),
           updatedAt: new Date()
         })
         setHasUnsavedChanges(false)
@@ -63,6 +64,7 @@ export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEdito
       title: newMarkdown.split('\n')[0]?.replace(/^#\s*/, '') || 'Untitled Document',
       markdown: newMarkdown,
       version: currentDocument?.version,
+      createdAt: currentDocument?.createdAt || new Date(),
       updatedAt: new Date()
     })
     setHasUnsavedChanges(true)
