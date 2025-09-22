@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import SplitScreenEditor from '@/components/SplitScreenEditor'
 import Sidebar from '@/components/Sidebar'
+import SaveDumpViewer from '@/components/SaveDumpViewer'
 import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -22,22 +23,38 @@ export default function Home() {
 
   const { currentDocument, isSaving, hasUnsavedChanges, setHasUnsavedChanges } = useEditorStore()
 
-  // Initialize with a default document on first load
+  // Initialize with a default document for headless mode
   useEffect(() => {
-    const initializeDocument = async () => {
-      try {
-        const response = await fetch(`/api/spaces/${spaceId}/documents`)
-        const documents = await response.json()
+    const defaultDoc: Document = {
+      id: 'welcome-doc',
+      spaceId,
+      slug: 'welcome',
+      title: 'Welcome to Flowerpress',
+      markdown: `# Welcome to Flowerpress
 
-        if (documents.length > 0) {
-          setCurrentDoc(documents[0])
-        }
-      } catch (error) {
-        console.error('Failed to initialize document:', error)
-      }
+This is a headless markdown editor with drag & drop support!
+
+## Features
+
+- **Drag & Drop Images**: Drop image files to insert them automatically
+- **CSV Support**: Drop CSV files to convert them to markdown tables
+- **Save Visualization**: All saves are dumped to screen so you can see the flow
+- **Multiple View Modes**: Rich text, split, source, and preview modes
+
+## Try it out!
+
+1. Try typing in this editor
+2. Drag and drop an image file
+3. Drop a CSV file to see it converted to a table
+4. Click the "💾 Saves" button in the top right to see all save events
+
+The backend is completely mocked - all saves are logged and displayed so you can see exactly what data would be sent to your real backend.
+`,
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
 
-    initializeDocument()
+    setCurrentDoc(defaultDoc)
   }, [spaceId])
 
   const handleSave = async () => {
@@ -75,6 +92,12 @@ export default function Home() {
     }
     setCurrentDoc(doc)
     setPublishUrl(null)
+  }
+
+  const handleDocumentUpdate = (updatedDoc: Document) => {
+    setCurrentDoc(updatedDoc)
+    // Trigger sidebar refresh to show updated title
+    window.dispatchEvent(new CustomEvent('refresh-sidebar'))
   }
 
   const handleUnsavedConfirm = () => {
@@ -179,7 +202,12 @@ export default function Home() {
         <main className="flex-1 overflow-hidden">
           {currentDoc ? (
             <div className="h-full">
-              <SplitScreenEditor key={currentDoc.id} spaceId={spaceId} docSlug={currentDoc.slug} />
+              <SplitScreenEditor
+                key={currentDoc.id}
+                spaceId={spaceId}
+                document={currentDoc}
+                onDocumentUpdate={handleDocumentUpdate}
+              />
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-gray-400">
@@ -211,6 +239,9 @@ export default function Home() {
         cancelText="Stay"
         variant="default"
       />
+
+      {/* Save Dump Viewer */}
+      <SaveDumpViewer />
     </div>
   )
 }

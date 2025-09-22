@@ -1,0 +1,90 @@
+// Mock storage backend that dumps saves to screen
+import { StorageBackend, SaveEvent, emitSaveEvent } from './storage-interface'
+
+class MockStorageBackend implements StorageBackend {
+  private documents = new Map<string, { markdown: string; version: string }>()
+
+  async saveMarkdown(spaceId: string, docSlug: string, markdown: string): Promise<{ version: string; etag: string }> {
+    const version = Date.now().toString()
+    const etag = `etag-${version}`
+
+    // Store in memory
+    const key = `${spaceId}/${docSlug}`
+    this.documents.set(key, { markdown, version })
+
+    // Emit save event for display
+    emitSaveEvent({
+      timestamp: new Date(),
+      type: 'markdown',
+      action: 'save',
+      data: {
+        spaceId,
+        docSlug,
+        markdown,
+        version,
+        etag,
+        size: new Blob([markdown]).size
+      }
+    })
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    return { version, etag }
+  }
+
+  async getMarkdown(spaceId: string, docSlug: string): Promise<{ markdown: string; version?: string }> {
+    const key = `${spaceId}/${docSlug}`
+    const doc = this.documents.get(key)
+
+    if (doc) {
+      return {
+        markdown: doc.markdown,
+        version: doc.version
+      }
+    }
+
+    // Return default content for new documents
+    return {
+      markdown: `# ${docSlug.replace(/-/g, ' ')}\n\nStart writing your document here...\n`,
+      version: Date.now().toString()
+    }
+  }
+
+  async saveAsset(file: File, path: string): Promise<{ url: string; path: string }> {
+    // Create a mock URL for the asset
+    const url = URL.createObjectURL(file)
+
+    // Emit save event for display
+    emitSaveEvent({
+      timestamp: new Date(),
+      type: 'asset',
+      action: 'save',
+      data: {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        path,
+        url,
+        preview: file.type.startsWith('image/') ? url : null
+      }
+    })
+
+    console.log(`📁 Asset saved: ${file.name} (${file.type}, ${(file.size / 1024).toFixed(1)}KB)`)
+
+    return { url, path }
+  }
+
+  async deleteAsset(path: string): Promise<void> {
+    emitSaveEvent({
+      timestamp: new Date(),
+      type: 'asset',
+      action: 'delete',
+      data: { path }
+    })
+
+    console.log(`🗑️ Asset deleted: ${path}`)
+  }
+}
+
+export const mockStorage = new MockStorageBackend()

@@ -1,4 +1,8 @@
 import { SaveMarkdownResponse } from '@/types'
+import { mockStorage } from './mock-storage'
+
+// Use mock storage for headless editor mode
+const USE_MOCK_STORAGE = true
 
 const api = {
   async post(url: string, data: any) {
@@ -18,6 +22,10 @@ const api = {
 
 export const editorAPI = {
   async saveMarkdown(spaceId: string, docSlug: string, markdown: string): Promise<SaveMarkdownResponse> {
+    if (USE_MOCK_STORAGE) {
+      return await mockStorage.saveMarkdown(spaceId, docSlug, markdown)
+    }
+
     const response = await api.post(`/spaces/${spaceId}/docs/${docSlug}/markdown`, {
       markdown
     })
@@ -25,7 +33,22 @@ export const editorAPI = {
   },
 
   async getMarkdown(spaceId: string, docSlug: string): Promise<{ markdown: string; version?: string }> {
+    if (USE_MOCK_STORAGE) {
+      return await mockStorage.getMarkdown(spaceId, docSlug)
+    }
+
     const response = await api.get(`/spaces/${spaceId}/docs/${docSlug}/markdown`)
     return response.data
+  },
+
+  async saveAsset(file: File, spaceId: string, docSlug: string): Promise<{ url: string; path: string }> {
+    const path = `${spaceId}/${docSlug}/assets/${file.name}`
+
+    if (USE_MOCK_STORAGE) {
+      return await mockStorage.saveAsset(file, path)
+    }
+
+    // Real implementation would upload to server
+    throw new Error('Real asset upload not implemented yet')
   }
 }

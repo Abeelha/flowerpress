@@ -1,93 +1,148 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import CodeMirrorEditor, { MarkdownPreview } from './CodeMirrorEditor'
 import BlockNoteEditor from './BlockNoteEditor'
+import FileDropZone from './FileDropZone'
 import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { Document } from '@/types'
 
 interface SplitScreenEditorProps {
   spaceId: string
-  docSlug: string
+  document: Document
+  onDocumentUpdate?: (doc: Document) => void
 }
 
-export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEditorProps) {
-  const [markdown, setMarkdown] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate }: SplitScreenEditorProps) {
+  const [markdown, setMarkdown] = useState(document.markdown || '')
+  const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<'rich' | 'split' | 'source' | 'preview'>('rich')
 
   const {
-    currentDocument,
     setDocument,
     setSaving,
     hasUnsavedChanges,
-    setHasUnsavedChanges
+    setHasUnsavedChanges,
+    updateMarkdown
   } = useEditorStore()
 
-  // Load document on mount
+  // Initialize editor with document data
   useEffect(() => {
-    const loadDocument = async () => {
-      try {
-        setIsLoading(true)
-        const { markdown: content, version } = await editorAPI.getMarkdown(spaceId, docSlug)
-        setMarkdown(content || '# Untitled Document\n\n')
-        setDocument({
-          id: docSlug,
-          spaceId,
-          slug: docSlug,
-          title: content?.split('\n')[0]?.replace(/^#\s*/, '') || 'Untitled Document',
-          markdown: content || '',
-          version,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        setHasUnsavedChanges(false)
-      } catch (error) {
-        console.error('Failed to load document:', error)
-        setMarkdown('# Untitled Document\n\n')
-      } finally {
-        setIsLoading(false)
-      }
-    }
+    setMarkdown(document.markdown || '')
+    setDocument(document)
+    setHasUnsavedChanges(false)
+  }, [document, setDocument, setHasUnsavedChanges])
 
-    loadDocument()
-  }, [spaceId, docSlug, setDocument, setHasUnsavedChanges])
+  // Load fresh content from server
+  const loadDocumentContent = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const { markdown: content, version } = await editorAPI.getMarkdown(spaceId, document.slug)
+      const title = content?.split('\n')[0]?.replace(/^#\s*/, '') || document.title
+
+      const updatedDoc = {
+        ...document,
+        markdown: content || '',
+        version,
+        title
+      }
+
+      setMarkdown(content || '')
+      setDocument(updatedDoc)
+      onDocumentUpdate?.(updatedDoc)
+      setHasUnsavedChanges(false)
+    } catch (error) {
+      console.error('Failed to load document:', error)
+      toast.error('Failed to load document')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [spaceId, document, setDocument, setHasUnsavedChanges, onDocumentUpdate])
 
   // Handle markdown changes
-  const handleMarkdownChange = (newMarkdown: string) => {
+  const handleMarkdownChange = useCallback((newMarkdown: string) => {
     setMarkdown(newMarkdown)
-    setDocument({
-      id: currentDocument?.id || docSlug,
-      spaceId,
-      slug: docSlug,
-      title: newMarkdown.split('\n')[0]?.replace(/^#\s*/, '') || 'Untitled Document',
+
+    const title = newMarkdown.split('\n')[0]?.replace(/^#\s*/, '') || document.title
+    const updatedDoc = {
+      ...document,
+      title,
       markdown: newMarkdown,
-      version: currentDocument?.version,
-      createdAt: currentDocument?.createdAt || new Date(),
       updatedAt: new Date()
-    })
+    }
+
+    setDocument(updatedDoc)
+    updateMarkdown(newMarkdown)
+    onDocumentUpdate?.(updatedDoc)
     setHasUnsavedChanges(true)
-  }
+  }, [document, setDocument, updateMarkdown, onDocumentUpdate, setHasUnsavedChanges])
+
+  // Manual save function
+  const handleSave = useCallback(async () => {
+    if (!hasUnsavedChanges || !markdown) return
+
+    try {
+      setSaving(true)
+      const result = await editorAPI.saveMarkdown(spaceId, document.slug, markdown)
+
+      const updatedDoc = {
+        ...document,
+        markdown,
+        version: result.version,
+        updatedAt: new Date()
+      }
+
+      setDocument(updatedDoc)
+      onDocumentUpdate?.(updatedDoc)
+      setHasUnsavedChanges(false)
+      toast.success('Document saved')
+    } catch (error) {
+      console.error('Save failed:', error)
+      toast.error('Failed to save document')
+    } finally {
+      setSaving(false)
+    }
+  }, [hasUnsavedChanges, markdown, spaceId, document, setSaving, setHasUnsavedChanges, setDocument, onDocumentUpdate])
 
   // Auto-save functionality
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (hasUnsavedChanges && markdown) {
+      if (hasUnsavedChanges && markdown && document) {
         try {
           setSaving(true)
-          await editorAPI.saveMarkdown(spaceId, docSlug, markdown)
+          const result = await editorAPI.saveMarkdown(spaceId, document.slug, markdown)
+
+          // Update document with new version info
+          const updatedDoc = {
+            ...document,
+            markdown,
+            version: result.version,
+            updatedAt: new Date()
+          }
+
+          setDocument(updatedDoc)
+          onDocumentUpdate?.(updatedDoc)
           setHasUnsavedChanges(false)
         } catch (error) {
           console.error('Autosave failed:', error)
+          // Don't show toast for autosave failures as they're too noisy
         } finally {
           setSaving(false)
         }
       }
-    }, 3000) // Auto-save every 3 seconds
+    }, 3000)
 
     return () => clearInterval(interval)
-  }, [hasUnsavedChanges, markdown, spaceId, docSlug, setSaving, setHasUnsavedChanges])
+  }, [hasUnsavedChanges, markdown, spaceId, document, setSaving, setHasUnsavedChanges, setDocument, onDocumentUpdate])
+
+  // Handle file insertion from drag & drop
+  const handleFileInsert = useCallback((insertMarkdown: string) => {
+    const cursorPos = markdown.length // Insert at end for now
+    const newMarkdown = markdown + '\n\n' + insertMarkdown
+    handleMarkdownChange(newMarkdown)
+  }, [markdown, handleMarkdownChange])
 
   if (isLoading) {
     return (
@@ -98,7 +153,12 @@ export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEdito
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <FileDropZone
+      spaceId={spaceId}
+      document={document}
+      onFileInsert={handleFileInsert}
+    >
+      <div className="h-full flex flex-col">
       {/* Editor Toolbar */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center gap-2">
@@ -146,18 +206,28 @@ export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEdito
             </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <span>{markdown.length} chars</span>
-          <span>•</span>
-          <span>{markdown.split('\n').length} lines</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadDocumentContent}
+            className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            title="Reload content"
+          >
+            ↻
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!hasUnsavedChanges}
+            className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Save
+          </button>
         </div>
       </div>
 
       {/* Editor Content */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 overflow-hidden">
         {viewMode === 'rich' && (
-          <div className="w-full h-full">
+          <div className="h-full">
             <BlockNoteEditor
               value={markdown}
               onChange={handleMarkdownChange}
@@ -166,21 +236,23 @@ export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEdito
         )}
 
         {viewMode === 'split' && (
-          <>
-            <div className="w-1/2 h-full border-r border-gray-200 dark:border-gray-700">
-              <BlockNoteEditor
+          <div className="h-full flex">
+            <div className="w-1/2 border-r border-gray-200 dark:border-gray-700">
+              <CodeMirrorEditor
                 value={markdown}
                 onChange={handleMarkdownChange}
               />
             </div>
-            <div className="w-1/2 h-full bg-white dark:bg-gray-900">
-              <MarkdownPreview markdown={markdown} />
+            <div className="w-1/2 overflow-auto">
+              <div className="p-4">
+                <MarkdownPreview markdown={markdown} />
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         {viewMode === 'source' && (
-          <div className="w-full h-full">
+          <div className="h-full">
             <CodeMirrorEditor
               value={markdown}
               onChange={handleMarkdownChange}
@@ -189,11 +261,14 @@ export default function SplitScreenEditor({ spaceId, docSlug }: SplitScreenEdito
         )}
 
         {viewMode === 'preview' && (
-          <div className="w-full h-full bg-white dark:bg-gray-900">
-            <MarkdownPreview markdown={markdown} />
+          <div className="h-full overflow-auto">
+            <div className="p-4">
+              <MarkdownPreview markdown={markdown} />
+            </div>
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </FileDropZone>
   )
 }
