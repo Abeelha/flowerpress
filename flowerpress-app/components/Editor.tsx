@@ -1,0 +1,168 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { BlockNoteEditor, PartialBlock } from '@blocknote/core'
+import { BlockNoteView, useCreateBlockNote } from '@blocknote/react'
+import '@blocknote/react/style.css'
+import { useEditorStore } from '@/lib/store'
+import { editorAPI } from '@/lib/api'
+import toast from 'react-hot-toast'
+import { useDropzone } from 'react-dropzone'
+
+interface EditorProps {
+  spaceId: string
+  docSlug: string
+}
+
+export default function Editor({ spaceId, docSlug }: EditorProps) {
+  const {
+    currentDocument,
+    setDocument,
+    updateMarkdown,
+    addAsset,
+    setSaving,
+    hasUnsavedChanges,
+    setHasUnsavedChanges
+  } = useEditorStore()
+
+  const [initialContent, setInitialContent] = useState<PartialBlock[]>([])
+
+  const editor = useCreateBlockNote({
+    initialContent: initialContent.length > 0 ? initialContent : undefined,
+  })
+
+  const handleFileDrop = async (acceptedFiles: File[]) => {
+    for (const file of acceptedFiles) {
+      try {
+        const uploadResponse = await editorAPI.uploadAsset(spaceId, docSlug, file)
+
+        const isImage = file.type.startsWith('image/')
+        const isCSV = file.type === 'text/csv' || file.name.endsWith('.csv')
+
+        if (isImage) {
+          editor.insertBlocks([
+            {
+              type: 'image',
+              props: {
+                url: uploadResponse.url,
+                caption: file.name
+              }
+            }
+          ], editor.getTextCursorPosition().block)
+        } else if (isCSV) {
+          editor.insertBlocks([
+            {
+              type: 'paragraph',
+              content: `{{table: ${uploadResponse.relPath}}}`
+            }
+          ], editor.getTextCursorPosition().block)
+        }
+
+        addAsset({
+          spaceId,
+          docId: docSlug,
+          relPath: uploadResponse.relPath,
+          url: uploadResponse.url,
+          mediaType: uploadResponse.mediaType,
+          size: file.size,
+          hash: uploadResponse.hash,
+          updatedAt: new Date()
+        })
+
+        toast.success(`Uploaded ${file.name}`)
+      } catch (error) {
+        toast.error(`Failed to upload ${file.name}`)
+        console.error(error)
+      }
+    }
+  }
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handleFileDrop,
+    noClick: true,
+    noKeyboard: true,
+    accept: {
+      'image/*': [],
+      'text/csv': ['.csv'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+    }
+  })
+
+  useEffect(() => {
+    const loadDocument = async () => {
+      try {
+        const { markdown, version } = await editorAPI.getMarkdown(spaceId, docSlug)
+        setDocument({
+          id: docSlug,
+          spaceId,
+          slug: docSlug,
+          markdown,
+          version,
+          updatedAt: new Date()
+        })
+
+        if (markdown) {
+          const blocks = await editor.tryParseMarkdownToBlocks(markdown)
+          setInitialContent(blocks)
+        }
+      } catch (error) {
+        console.error('Failed to load document:', error)
+      }
+    }
+
+    loadDocument()
+  }, [spaceId, docSlug, setDocument])
+
+  useEffect(() => {
+    const handleChange = async () => {
+      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+      updateMarkdown(markdown)
+    }
+
+    editor.onChange(handleChange)
+  }, [editor, updateMarkdown])
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (hasUnsavedChanges && currentDocument?.markdown) {
+        try {
+          setSaving(true)
+          const response = await editorAPI.saveMarkdown(
+            spaceId,
+            docSlug,
+            currentDocument.markdown
+          )
+          setDocument({
+            ...currentDocument,
+            version: response.version,
+            etag: response.etag
+          })
+          setHasUnsavedChanges(false)
+        } catch (error) {
+          console.error('Autosave failed:', error)
+        } finally {
+          setSaving(false)
+        }
+      }
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [hasUnsavedChanges, currentDocument, spaceId, docSlug, setSaving, setDocument, setHasUnsavedChanges])
+
+  return (
+    <div {...getRootProps()} className="h-full relative">
+      <input {...getInputProps()} />
+      {isDragActive && (
+        <div className="absolute inset-0 bg-blue-50 bg-opacity-90 z-50 flex items-center justify-center">
+          <p className="text-2xl text-blue-600">Drop files here...</p>
+        </div>
+      )}
+      <BlockNoteView
+        editor={editor}
+        theme="light"
+        className="min-h-screen"
+      />
+    </div>
+  )
+}
