@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core'
 import { BlockNoteView, useCreateBlockNote } from '@blocknote/react'
 import '@blocknote/react/style.css'
@@ -27,10 +27,40 @@ export default function Editor({ spaceId, docSlug }: EditorProps) {
     setHasUnsavedChanges
   } = useEditorStore()
 
-  const [initialContent, setInitialContent] = useState<PartialBlock[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [initialMarkdown, setInitialMarkdown] = useState<string>('')
 
+  // Load document on mount
+  useEffect(() => {
+    const loadDocument = async () => {
+      try {
+        setIsLoading(true)
+        const { markdown, version } = await editorAPI.getMarkdown(spaceId, docSlug)
+        setDocument({
+          id: docSlug,
+          spaceId,
+          slug: docSlug,
+          markdown,
+          version,
+          updatedAt: new Date()
+        })
+        setInitialMarkdown(markdown || '')
+      } catch (error) {
+        console.error('Failed to load document:', error)
+        setInitialMarkdown('# Untitled Document\n')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadDocument()
+  }, [spaceId, docSlug, setDocument])
+
+  // Create editor only after initial content is loaded
   const editor = useCreateBlockNote({
-    initialContent: initialContent.length > 0 ? initialContent : undefined,
+    initialContent: initialMarkdown && !isLoading ?
+      initialMarkdown :
+      undefined,
   })
 
   const handleFileDrop = async (acceptedFiles: File[]) => {
@@ -91,40 +121,19 @@ export default function Editor({ spaceId, docSlug }: EditorProps) {
     }
   })
 
+  // Update markdown on editor changes
   useEffect(() => {
-    const loadDocument = async () => {
-      try {
-        const { markdown, version } = await editorAPI.getMarkdown(spaceId, docSlug)
-        setDocument({
-          id: docSlug,
-          spaceId,
-          slug: docSlug,
-          markdown,
-          version,
-          updatedAt: new Date()
-        })
+    if (!editor || isLoading) return
 
-        if (markdown) {
-          const blocks = await editor.tryParseMarkdownToBlocks(markdown)
-          setInitialContent(blocks)
-        }
-      } catch (error) {
-        console.error('Failed to load document:', error)
-      }
-    }
-
-    loadDocument()
-  }, [spaceId, docSlug, setDocument])
-
-  useEffect(() => {
     const handleChange = async () => {
       const markdown = await editor.blocksToMarkdownLossy(editor.document)
       updateMarkdown(markdown)
     }
 
     editor.onChange(handleChange)
-  }, [editor, updateMarkdown])
+  }, [editor, updateMarkdown, isLoading])
 
+  // Autosave
   useEffect(() => {
     const interval = setInterval(async () => {
       if (hasUnsavedChanges && currentDocument?.markdown) {
@@ -151,6 +160,14 @@ export default function Editor({ spaceId, docSlug }: EditorProps) {
 
     return () => clearInterval(interval)
   }, [hasUnsavedChanges, currentDocument, spaceId, docSlug, setSaving, setDocument, setHasUnsavedChanges])
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-gray-500 dark:text-gray-400">Loading editor...</div>
+      </div>
+    )
+  }
 
   return (
     <div {...getRootProps()} className="h-full relative">
