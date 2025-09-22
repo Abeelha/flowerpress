@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { serverStorage } from '@/lib/server-storage'
+import fs from 'fs/promises'
+import path from 'path'
 
 const globalDB = global as any
 
@@ -43,7 +46,23 @@ export async function DELETE(
   { params }: { params: { spaceId: string; id: string } }
 ) {
   try {
-    const { id } = params
+    const { spaceId, id } = params
+
+    // Get document info before deleting
+    const document = globalDB.flowerpressDB.documents.get(id)
+
+    if (document) {
+      // Delete the markdown file from filesystem
+      const filePath = path.join(process.cwd(), '.flowerpress-storage', 'spaces', spaceId, document.slug, 'README.md')
+      try {
+        await fs.unlink(filePath)
+        // Try to remove the document directory if empty
+        const dirPath = path.dirname(filePath)
+        await fs.rmdir(dirPath).catch(() => {})
+      } catch (error) {
+        console.log('File might not exist:', error)
+      }
+    }
 
     globalDB.flowerpressDB.documents.delete(id)
 

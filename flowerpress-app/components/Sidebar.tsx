@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { Document, Folder } from '@/types'
 import { useEditorStore } from '@/lib/store'
 import toast from 'react-hot-toast'
+import Modal from './Modal'
+import ConfirmDialog from './ConfirmDialog'
 
 interface SidebarProps {
   spaceId: string
@@ -25,6 +27,17 @@ export default function Sidebar({
   const [newName, setNewName] = useState('')
   const [creatingFolder, setCreatingFolder] = useState<string | null>(null)
   const [draggedItem, setDraggedItem] = useState<{ type: 'folder' | 'document', id: string } | null>(null)
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    type: 'folder' | 'document'
+    parentId?: string
+  }>({ isOpen: false, type: 'folder' })
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean
+    type: 'folder' | 'document'
+    id: string
+    name: string
+  }>({ isOpen: false, type: 'folder', id: '', name: '' })
 
   useEffect(() => {
     loadFileSystem()
@@ -50,15 +63,16 @@ export default function Sidebar({
     }
   }
 
-  const handleCreateFolder = async (parentId?: string) => {
-    const folderName = prompt('Enter folder name:')
-    if (!folderName) return
+  const handleCreateFolder = (parentId?: string) => {
+    setModalState({ isOpen: true, type: 'folder', parentId })
+  }
 
+  const handleCreateFolderConfirm = async (folderName: string) => {
     try {
       const response = await fetch(`/api/spaces/${spaceId}/folders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: folderName, parentId })
+        body: JSON.stringify({ name: folderName, parentId: modalState.parentId })
       })
 
       if (response.ok) {
@@ -67,6 +81,8 @@ export default function Sidebar({
       }
     } catch (error) {
       toast.error('Failed to create folder')
+    } finally {
+      setModalState({ isOpen: false, type: 'folder' })
     }
   }
 
@@ -95,9 +111,12 @@ export default function Sidebar({
     }
   }
 
-  const handleDelete = async (type: 'folder' | 'document', id: string) => {
-    if (!confirm('Are you sure you want to delete this?')) return
+  const handleDelete = (type: 'folder' | 'document', id: string, name: string) => {
+    setDeleteConfirm({ isOpen: true, type, id, name })
+  }
 
+  const handleDeleteConfirm = async () => {
+    const { type, id } = deleteConfirm
     try {
       const endpoint = type === 'folder'
         ? `/api/spaces/${spaceId}/folders/${id}`
@@ -111,6 +130,8 @@ export default function Sidebar({
       }
     } catch (error) {
       toast.error('Failed to delete')
+    } finally {
+      setDeleteConfirm({ isOpen: false, type: 'folder', id: '', name: '' })
     }
   }
 
@@ -226,7 +247,7 @@ export default function Sidebar({
               </svg>
             </button>
             <button
-              onClick={() => handleDelete('folder', folder.id)}
+              onClick={() => handleDelete('folder', folder.id, folder.name)}
               className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded"
               title="Delete"
             >
@@ -293,7 +314,7 @@ export default function Sidebar({
           <button
             onClick={(e) => {
               e.stopPropagation()
-              handleDelete('document', doc.id)
+              handleDelete('document', doc.id, doc.title)
             }}
             className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded"
             title="Delete"
@@ -344,6 +365,27 @@ export default function Sidebar({
         {rootFolders.map(folder => renderFolder(folder))}
         {rootDocuments.map(doc => renderDocument(doc))}
       </div>
+
+      {/* Modal for creating folders */}
+      <Modal
+        isOpen={modalState.isOpen && modalState.type === 'folder'}
+        onClose={() => setModalState({ isOpen: false, type: 'folder' })}
+        onConfirm={handleCreateFolderConfirm}
+        title="Create New Folder"
+        placeholder="Enter folder name"
+        confirmText="Create"
+      />
+
+      {/* Confirmation dialog for deletion */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, type: 'folder', id: '', name: '' })}
+        onConfirm={handleDeleteConfirm}
+        title={`Delete ${deleteConfirm.type === 'folder' ? 'Folder' : 'Document'}`}
+        message={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

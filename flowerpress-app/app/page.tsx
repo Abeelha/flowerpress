@@ -8,12 +8,17 @@ import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import ThemeToggle from '@/components/ThemeToggle'
 import { Document } from '@/types'
+import Modal from '@/components/Modal'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 export default function Home() {
   const [spaceId] = useState('default-space')
   const [currentDoc, setCurrentDoc] = useState<Document | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishUrl, setPublishUrl] = useState<string | null>(null)
+  const [newDocModal, setNewDocModal] = useState<{ isOpen: boolean, folderId?: string }>({ isOpen: false })
+  const [unsavedConfirm, setUnsavedConfirm] = useState<{ isOpen: boolean, pendingDoc: Document | null }>({ isOpen: false, pendingDoc: null })
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false)
 
   const { currentDocument, isSaving, hasUnsavedChanges, setHasUnsavedChanges } = useEditorStore()
 
@@ -74,23 +79,35 @@ export default function Home() {
 
   const handleDocumentSelect = (doc: Document) => {
     if (hasUnsavedChanges) {
-      if (!confirm('You have unsaved changes. Do you want to continue?')) {
-        return
-      }
+      setUnsavedConfirm({ isOpen: true, pendingDoc: doc })
+      return
     }
     setCurrentDoc(doc)
     setPublishUrl(null)
   }
 
-  const handleNewDocument = async (folderId?: string) => {
-    const title = prompt('Enter document title:')
-    if (!title) return
+  const handleUnsavedConfirm = () => {
+    if (unsavedConfirm.pendingDoc) {
+      setCurrentDoc(unsavedConfirm.pendingDoc)
+      setPublishUrl(null)
+      setHasUnsavedChanges(false)
+    }
+    setUnsavedConfirm({ isOpen: false, pendingDoc: null })
+  }
+
+  const handleNewDocument = (folderId?: string) => {
+    setNewDocModal({ isOpen: true, folderId })
+  }
+
+  const handleNewDocumentConfirm = async (title: string) => {
+    if (isCreatingDocument) return // Prevent duplicate submissions
 
     try {
+      setIsCreatingDocument(true)
       const response = await fetch(`/api/spaces/${spaceId}/documents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, folderId })
+        body: JSON.stringify({ title: title.trim(), folderId: newDocModal.folderId })
       })
 
       if (response.ok) {
@@ -99,9 +116,16 @@ export default function Home() {
         toast.success('Document created')
         // Trigger sidebar refresh
         window.dispatchEvent(new CustomEvent('refresh-sidebar'))
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to create document')
       }
     } catch (error) {
+      console.error('Document creation error:', error)
       toast.error('Failed to create document')
+    } finally {
+      setIsCreatingDocument(false)
+      setNewDocModal({ isOpen: false })
     }
   }
 
@@ -173,6 +197,29 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* Modal for new document */}
+      <Modal
+        isOpen={newDocModal.isOpen}
+        onClose={() => !isCreatingDocument && setNewDocModal({ isOpen: false })}
+        onConfirm={handleNewDocumentConfirm}
+        title="Create New Document"
+        placeholder="Enter document title"
+        confirmText={isCreatingDocument ? "Creating..." : "Create"}
+        disabled={isCreatingDocument}
+      />
+
+      {/* Confirmation dialog for unsaved changes */}
+      <ConfirmDialog
+        isOpen={unsavedConfirm.isOpen}
+        onClose={() => setUnsavedConfirm({ isOpen: false, pendingDoc: null })}
+        onConfirm={handleUnsavedConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Do you want to continue without saving?"
+        confirmText="Continue"
+        cancelText="Stay"
+        variant="default"
+      />
     </div>
   )
 }

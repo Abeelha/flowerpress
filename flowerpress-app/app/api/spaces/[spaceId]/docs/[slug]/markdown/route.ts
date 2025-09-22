@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serverStorage } from '@/lib/server-storage'
+import { Document } from '@/types'
+
+const globalDB = global as any
+
+if (!globalDB.flowerpressDB) {
+  globalDB.flowerpressDB = {
+    folders: new Map(),
+    documents: new Map<string, Document>()
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -33,6 +43,17 @@ export async function POST(
     }
 
     const result = await serverStorage.saveMarkdown(spaceId, slug, markdown)
+
+    // Update the in-memory database
+    const existingDoc = Array.from(globalDB.flowerpressDB.documents.values())
+      .find((d: Document) => d.spaceId === spaceId && d.slug === slug)
+
+    if (existingDoc) {
+      existingDoc.markdown = markdown
+      existingDoc.updatedAt = new Date()
+      globalDB.flowerpressDB.documents.set(existingDoc.id, existingDoc)
+    }
+
     return NextResponse.json(result)
   } catch (error) {
     return NextResponse.json(

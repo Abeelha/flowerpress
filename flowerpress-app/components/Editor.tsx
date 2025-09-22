@@ -45,6 +45,7 @@ export default function Editor({ spaceId, docSlug }: EditorProps) {
           updatedAt: new Date()
         })
         setInitialMarkdown(markdown || '')
+        setHasUnsavedChanges(false)
       } catch (error) {
         console.error('Failed to load document:', error)
         setInitialMarkdown('# Untitled Document\n')
