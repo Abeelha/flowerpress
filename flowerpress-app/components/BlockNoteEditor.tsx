@@ -98,8 +98,9 @@ export default function BlockNoteEditor({ value, onChange }: BlockNoteEditorProp
   useEffect(() => {
     if (!editor) return
 
-    const handlePaste = async (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items
+    const handlePaste = async (event: Event) => {
+      const clipboardEvent = event as ClipboardEvent
+      const items = clipboardEvent.clipboardData?.items
       if (!items) return
 
       for (const item of Array.from(items)) {
