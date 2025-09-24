@@ -42,9 +42,14 @@ export default function FileDropZone({ spaceId, document, onFileInsert, children
           results.push(`![${altText}](${url})`)
 
         } else if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
-          const { url } = await editorAPI.saveAsset(file, spaceId, document.slug)
+          // Read CSV content for embedding in markdown
+          const csvContent = await file.text()
 
-          results.push(`\n\n### ${file.name}\n\n\`\`\`csv\n${url}\n\`\`\`\n\n`)
+          // Also save as asset for backup
+          await editorAPI.saveAsset(file, spaceId, document.slug)
+
+          // Embed the actual CSV content in the markdown
+          results.push(`\n\n### ${file.name}\n\n\`\`\`csv-data\n${csvContent}\n\`\`\`\n\n`)
 
           toast.success(`CSV file "${file.name}" uploaded successfully`)
 

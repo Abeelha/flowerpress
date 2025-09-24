@@ -8,6 +8,106 @@ import { basicSetup } from 'codemirror'
 import { marked } from 'marked'
 import CSVPreview from './CSVPreview'
 
+// CSV Preview component for raw data
+function CSVPreviewFromData({ data, title }: { data: string; title?: string }) {
+  const [parsedData, setParsedData] = useState<string[][]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const parseCSV = (text: string) => {
+      const lines = text.split('\n').filter(line => line.trim())
+      const rows = lines.map(line => {
+        // Simple CSV parsing - handles basic cases
+        const cells: string[] = []
+        let current = ''
+        let inQuotes = false
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]
+          const nextChar = line[i + 1]
+
+          if (char === '"') {
+            if (inQuotes && nextChar === '"') {
+              current += '"'
+              i++ // Skip next quote
+            } else {
+              inQuotes = !inQuotes
+            }
+          } else if (char === ',' && !inQuotes) {
+            cells.push(current.trim())
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        cells.push(current.trim())
+        return cells
+      })
+
+      setParsedData(rows)
+      setLoading(false)
+    }
+
+    parseCSV(data)
+  }, [data])
+
+  if (loading) {
+    return (
+      <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="animate-pulse">Loading CSV...</div>
+      </div>
+    )
+  }
+
+  if (parsedData.length === 0) {
+    return (
+      <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="text-gray-500">Empty CSV data</div>
+      </div>
+    )
+  }
+
+  const headers = parsedData[0]
+  const rows = parsedData.slice(1)
+
+  return (
+    <div className="overflow-x-auto">
+      {title && <h4 className="font-semibold mb-2">{title}</h4>}
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            {headers.map((header, index) => (
+              <th
+                key={index}
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex} className="hover:bg-gray-50">
+              {headers.map((_, colIndex) => (
+                <td
+                  key={colIndex}
+                  className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                >
+                  {row[colIndex] || ''}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-2 text-xs text-gray-500">
+        {rows.length} rows × {headers.length} columns
+      </div>
+    </div>
+  )
+}
+
 interface CodeMirrorEditorProps {
   value: string
   onChange: (value: string) => void
@@ -113,7 +213,7 @@ interface MarkdownPreviewProps {
 }
 
 export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
-  const [content, setContent] = useState<{ html: string; csvBlocks: Array<{ id: string; url: string; title?: string }> }>({
+  const [content, setContent] = useState<{ html: string; csvBlocks: Array<{ id: string; data: string; title?: string; isData: boolean }> }>({
     html: '',
     csvBlocks: []
   })
@@ -121,22 +221,29 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
   useEffect(() => {
     const renderMarkdown = async () => {
       try {
-        const csvBlocks: Array<{ id: string; url: string; title?: string }> = []
+        const csvBlocks: Array<{ id: string; data: string; title?: string; isData: boolean }> = []
         let processedMarkdown = markdown
 
-        const csvBlockRegex = /```csv\n(.*?)\n```/g
+        // Match both csv-data (content) and csv (URL) blocks
+        const csvBlockRegex = /```csv(-data)?\n([\s\S]*?)\n```/g
         let match
         let blockIndex = 0
 
         while ((match = csvBlockRegex.exec(markdown)) !== null) {
-          const url = match[1].trim()
+          const isData = match[1] === '-data'
+          const content = match[2].trim()
           const blockId = `csv-block-${blockIndex++}`
 
           const beforeBlock = markdown.substring(0, match.index)
           const titleMatch = beforeBlock.match(/###\s+([^\n]+)\n*$/m)
           const title = titleMatch ? titleMatch[1].trim() : undefined
 
-          csvBlocks.push({ id: blockId, url, title })
+          csvBlocks.push({
+            id: blockId,
+            data: content,
+            title,
+            isData
+          })
 
           processedMarkdown = processedMarkdown.replace(match[0], `<div id="${blockId}" class="csv-preview-placeholder"></div>`)
         }
@@ -175,7 +282,11 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
         {/* Render CSV previews */}
         {content.csvBlocks.map(block => (
           <div key={block.id} className="my-4">
-            <CSVPreview url={block.url} title={block.title} />
+            {block.isData ? (
+              <CSVPreviewFromData data={block.data} title={block.title} />
+            ) : (
+              <CSVPreview url={block.data} title={block.title} />
+            )}
           </div>
         ))}
       </div>
