@@ -23,15 +23,19 @@ export default function BlockNoteEditor({ value, onChange }: BlockNoteEditorProp
 
   // Mock asset upload integrated with our storage system
   const uploadAsset = useCallback(async (file: File): Promise<string> => {
+    console.log('Upload Asset called:', file.name, file.type)
     try {
       // Use our mock storage system
       const result = await editorAPI.saveAsset(file, 'default-space', 'current-doc')
+      console.log('Upload Asset result:', result.url)
       return result.url
     } catch (error) {
       console.error('Failed to upload asset:', error)
       // Fallback to object URL for images
       if (file.type.startsWith('image/')) {
-        return URL.createObjectURL(file)
+        const url = URL.createObjectURL(file)
+        console.log('Fallback URL created:', url)
+        return url
       }
       throw error
     }
@@ -45,7 +49,7 @@ export default function BlockNoteEditor({ value, onChange }: BlockNoteEditorProp
         content: "Start writing your document..."
       }
     ],
-    uploadFile: uploadAsset,
+    // Don't use uploadFile prop to avoid conflicts with our custom paste handler
     domAttributes: {
       editor: {
         class: 'flowerpress-editor'
@@ -90,39 +94,50 @@ export default function BlockNoteEditor({ value, onChange }: BlockNoteEditorProp
     initializeContent()
   }, [value, editor])
 
+  // Handle paste events for images - create image blocks specifically
   useEffect(() => {
     if (!editor) return
 
-    const handlePaste = async (event: Event) => {
-      const clipboardEvent = event as ClipboardEvent
-      const items = clipboardEvent.clipboardData?.items
+    const handlePaste = async (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
       if (!items) return
 
       for (const item of Array.from(items)) {
         if (item.type.startsWith('image/')) {
+          // Prevent default and stop propagation to handle image paste ourselves
           event.preventDefault()
+          event.stopPropagation()
           const file = item.getAsFile()
           if (file) {
             try {
+              console.log('Processing image paste:', file.name, file.type)
               const url = await uploadAsset(file)
+              console.log('Image uploaded, inserting block:', url)
+
+              // Insert specifically as an image block
               const currentBlock = editor.getTextCursorPosition().block
               await editor.insertBlocks([
                 {
                   type: 'image',
                   props: {
                     url: url,
-                    caption: file.name.replace(/\.[^/.]+$/, '')
+                    caption: ''
                   }
                 }
               ], currentBlock, 'after')
+
+              console.log('Image block inserted successfully')
             } catch (error) {
               console.error('Failed to paste image:', error)
             }
           }
+          // Break after handling first image to avoid duplicates
+          break
         }
       }
     }
 
+    // Add paste listener
     const editorElement = document.querySelector('.flowerpress-editor')
     if (editorElement) {
       editorElement.addEventListener('paste', handlePaste)
