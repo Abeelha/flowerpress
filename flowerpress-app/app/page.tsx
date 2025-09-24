@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { Document } from '@/types'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import InlineTitleEditor from '@/components/InlineTitleEditor'
 
 export default function Home() {
   const [spaceId] = useState('default-space')
@@ -81,6 +82,20 @@ The backend is completely mocked - all saves are logged and displayed so you can
     setCurrentDoc(updatedDoc)
     // Update the document in the documents list
     setDocuments(prev => prev.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc))
+  }
+
+  const handleTitleChange = (newTitle: string) => {
+    if (!currentDoc) return
+
+    const updatedDoc = {
+      ...currentDoc,
+      title: newTitle,
+      updatedAt: new Date()
+    }
+
+    setCurrentDoc(updatedDoc)
+    setDocuments(prev => prev.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc))
+    setHasUnsavedChanges(true)
   }
 
   const handleUnsavedConfirm = () => {
@@ -169,9 +184,17 @@ The backend is completely mocked - all saves are logged and displayed so you can
         <header className="border-b border-gray-200 bg-white px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900">
-                {currentDoc?.title || 'No document selected'}
-              </h1>
+              {currentDoc ? (
+                <InlineTitleEditor
+                  title={currentDoc.title}
+                  onTitleChange={handleTitleChange}
+                  placeholder="Untitled Document"
+                />
+              ) : (
+                <h1 className="text-xl font-bold text-gray-900">
+                  No document selected
+                </h1>
+              )}
               {hasUnsavedChanges && !isSaving && (
                 <span className="text-sm text-gray-500">• Unsaved changes</span>
               )}
