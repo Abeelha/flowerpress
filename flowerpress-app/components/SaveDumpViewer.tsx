@@ -37,10 +37,10 @@ export default function SaveDumpViewer() {
         <head>
           <title>Save Dump - ${save.data.docSlug || save.data.fileName || 'Unknown'}</title>
           <style>
-            body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+            body { font-family: monospace; padding: 20px; background: #f5f5f5; color: #333; }
             pre { white-space: pre-wrap; word-wrap: break-word; }
-            .header { background: #333; padding: 10px; margin-bottom: 20px; border-radius: 4px; }
-            .content { background: #2a2a2a; padding: 15px; border-radius: 4px; }
+            .header { background: #fff; padding: 10px; margin-bottom: 20px; border-radius: 4px; border: 1px solid #ddd; }
+            .content { background: #fff; padding: 15px; border-radius: 4px; border: 1px solid #ddd; }
             img { max-width: 100%; height: auto; border-radius: 4px; margin: 10px 0; }
           </style>
         </head>
@@ -99,9 +99,9 @@ export default function SaveDumpViewer() {
       {/* Save dump panel */}
       {isOpen && (
         <div className="fixed inset-0 z-40 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl h-3/4 flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Save Events</h2>
+          <div className="bg-white rounded-lg w-full max-w-4xl h-3/4 flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900">Save Events</h2>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSaves([])}
@@ -120,17 +120,17 @@ export default function SaveDumpViewer() {
 
             <div className="flex-1 overflow-hidden flex">
               {/* Save list */}
-              <div className="w-1/2 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+              <div className="w-1/2 border-r border-gray-200 overflow-y-auto">
                 {saves.length === 0 ? (
                   <div className="p-4 text-gray-500 text-center">No saves yet</div>
                 ) : (
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className="divide-y divide-gray-200">
                     {saves.map((save, index) => (
                       <div
                         key={index}
                         onClick={() => setSelectedSave(save)}
-                        className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                          selectedSave === save ? 'bg-blue-50 dark:bg-blue-900' : ''
+                        className={`p-3 cursor-pointer hover:bg-gray-50 ${
+                          selectedSave === save ? 'bg-blue-50' : ''
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -139,7 +139,7 @@ export default function SaveDumpViewer() {
                               {save.type === 'markdown' ? '📝' : '📁'}
                             </span>
                             <div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              <div className="text-sm font-medium text-gray-900">
                                 {save.type === 'markdown'
                                   ? save.data.docSlug
                                   : save.data.fileName}
@@ -159,7 +159,7 @@ export default function SaveDumpViewer() {
                             View
                           </button>
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        <div className="text-xs text-gray-600 mt-1">
                           {save.type === 'markdown'
                             ? `${formatFileSize(save.data.size)} • ${save.data.version}`
                             : `${save.data.fileType} • ${formatFileSize(save.data.fileSize)}`}
@@ -175,7 +175,7 @@ export default function SaveDumpViewer() {
                 {selectedSave ? (
                   <div className="p-4">
                     <div className="mb-4">
-                      <h3 className="font-bold text-gray-900 dark:text-white">
+                      <h3 className="font-bold text-gray-900">
                         {selectedSave.type === 'markdown' ? '📝 Markdown Save' : '📁 Asset Save'}
                       </h3>
                       <p className="text-sm text-gray-500">
@@ -187,16 +187,16 @@ export default function SaveDumpViewer() {
                       {selectedSave.type === 'markdown' ? (
                         <>
                           <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Document:</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{selectedSave.data.spaceId}/{selectedSave.data.docSlug}</p>
+                            <label className="text-sm font-medium text-gray-700">Document:</label>
+                            <p className="text-sm text-gray-900">{selectedSave.data.spaceId}/{selectedSave.data.docSlug}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Size:</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{formatFileSize(selectedSave.data.size)}</p>
+                            <label className="text-sm font-medium text-gray-700">Size:</label>
+                            <p className="text-sm text-gray-900">{formatFileSize(selectedSave.data.size)}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Content Preview:</label>
-                            <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 overflow-x-auto">
+                            <label className="text-sm font-medium text-gray-700">Content Preview:</label>
+                            <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
                               {selectedSave.data.markdown.substring(0, 500)}
                               {selectedSave.data.markdown.length > 500 ? '...' : ''}
                             </pre>
@@ -205,20 +205,20 @@ export default function SaveDumpViewer() {
                       ) : (
                         <>
                           <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">File:</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{selectedSave.data.fileName}</p>
+                            <label className="text-sm font-medium text-gray-700">File:</label>
+                            <p className="text-sm text-gray-900">{selectedSave.data.fileName}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Type:</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{selectedSave.data.fileType}</p>
+                            <label className="text-sm font-medium text-gray-700">Type:</label>
+                            <p className="text-sm text-gray-900">{selectedSave.data.fileType}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Size:</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{formatFileSize(selectedSave.data.fileSize)}</p>
+                            <label className="text-sm font-medium text-gray-700">Size:</label>
+                            <p className="text-sm text-gray-900">{formatFileSize(selectedSave.data.fileSize)}</p>
                           </div>
                           {selectedSave.data.preview && (
                             <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Preview:</label>
+                              <label className="text-sm font-medium text-gray-700">Preview:</label>
                               <img
                                 src={selectedSave.data.preview}
                                 alt={selectedSave.data.fileName}

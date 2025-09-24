@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { EditorView } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { markdown } from '@codemirror/lang-markdown'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { basicSetup } from 'codemirror'
-import { useTheme } from '@/contexts/theme-context'
 import { marked } from 'marked'
+import CSVPreview from './CSVPreview'
 
 interface CodeMirrorEditorProps {
   value: string
@@ -17,7 +16,6 @@ interface CodeMirrorEditorProps {
 export default function CodeMirrorEditor({ value, onChange }: CodeMirrorEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
-  const { theme } = useTheme()
 
   useEffect(() => {
     if (!editorRef.current) return
@@ -27,7 +25,6 @@ export default function CodeMirrorEditor({ value, onChange }: CodeMirrorEditorPr
       extensions: [
         basicSetup,
         markdown(),
-        theme === 'dark' ? oneDark : [],
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newValue = update.state.doc.toString()
@@ -37,20 +34,42 @@ export default function CodeMirrorEditor({ value, onChange }: CodeMirrorEditorPr
         EditorView.theme({
           '&': {
             height: '100%',
-            fontSize: '14px'
+            fontSize: '14px',
+            backgroundColor: 'white'
           },
           '.cm-content': {
             padding: '20px',
-            minHeight: '100%'
+            minHeight: '100%',
+            color: '#1a1a1a',
+            backgroundColor: 'white'
           },
           '.cm-focused': {
             outline: 'none'
           },
           '.cm-editor': {
-            height: '100%'
+            height: '100%',
+            backgroundColor: 'white'
+          },
+          '.cm-editor.cm-focused': {
+            outline: 'none'
           },
           '.cm-scroller': {
-            height: '100%'
+            height: '100%',
+            backgroundColor: 'white'
+          },
+          '.cm-line': {
+            color: '#1a1a1a'
+          },
+          '.cm-gutters': {
+            backgroundColor: '#f5f5f5',
+            color: '#666',
+            borderRight: '1px solid #ddd'
+          },
+          '.cm-activeLineGutter': {
+            backgroundColor: '#e8f2ff'
+          },
+          '.cm-activeLine': {
+            backgroundColor: '#f0f8ff'
           }
         })
       ]
@@ -66,7 +85,7 @@ export default function CodeMirrorEditor({ value, onChange }: CodeMirrorEditorPr
     return () => {
       view.destroy()
     }
-  }, [theme])
+  }, [])
 
   // Update editor content when value changes externally
   useEffect(() => {
@@ -82,7 +101,7 @@ export default function CodeMirrorEditor({ value, onChange }: CodeMirrorEditorPr
   }, [value])
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full bg-white">
       <div ref={editorRef} className="h-full" />
     </div>
   )
@@ -94,16 +113,39 @@ interface MarkdownPreviewProps {
 }
 
 export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
-  const [html, setHtml] = useState('')
+  const [content, setContent] = useState<{ html: string; csvBlocks: Array<{ id: string; url: string; title?: string }> }>({
+    html: '',
+    csvBlocks: []
+  })
 
   useEffect(() => {
     const renderMarkdown = async () => {
       try {
-        const rendered = await marked.parse(markdown)
-        setHtml(rendered)
+        const csvBlocks: Array<{ id: string; url: string; title?: string }> = []
+        let processedMarkdown = markdown
+
+        const csvBlockRegex = /```csv\n(.*?)\n```/g
+        let match
+        let blockIndex = 0
+
+        while ((match = csvBlockRegex.exec(markdown)) !== null) {
+          const url = match[1].trim()
+          const blockId = `csv-block-${blockIndex++}`
+
+          const beforeBlock = markdown.substring(0, match.index)
+          const titleMatch = beforeBlock.match(/###\s+([^\n]+)\n*$/m)
+          const title = titleMatch ? titleMatch[1].trim() : undefined
+
+          csvBlocks.push({ id: blockId, url, title })
+
+          processedMarkdown = processedMarkdown.replace(match[0], `<div id="${blockId}" class="csv-preview-placeholder"></div>`)
+        }
+
+        const rendered = await marked.parse(processedMarkdown)
+        setContent({ html: rendered, csvBlocks })
       } catch (error) {
         console.error('Error rendering markdown:', error)
-        setHtml('<p>Error rendering markdown</p>')
+        setContent({ html: '<p>Error rendering markdown</p>', csvBlocks: [] })
       }
     }
 
@@ -111,17 +153,33 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
   }, [markdown])
 
   return (
-    <div className="h-full w-full overflow-auto">
+    <div className="h-full w-full overflow-auto bg-white">
       <div
-        className="p-6 prose prose-gray dark:prose-invert max-w-none
-                   prose-headings:text-gray-900 dark:prose-headings:text-gray-100
-                   prose-p:text-gray-700 dark:prose-p:text-gray-300
-                   prose-a:text-blue-600 dark:prose-a:text-blue-400
-                   prose-strong:text-gray-900 dark:prose-strong:text-gray-100
-                   prose-code:text-pink-600 dark:prose-code:text-pink-400
-                   prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+        className="p-6 prose prose-gray max-w-none
+                   prose-headings:text-gray-900
+                   prose-p:text-gray-700
+                   prose-a:text-blue-600
+                   prose-strong:text-gray-900
+                   prose-code:text-pink-600
+                   prose-code:bg-gray-100
+                   prose-code:px-1
+                   prose-code:py-0.5
+                   prose-code:rounded
+                   prose-pre:bg-gray-100
+                   prose-pre:text-gray-800
+                   prose-blockquote:text-gray-700
+                   prose-blockquote:border-gray-300"
+      >
+        <div dangerouslySetInnerHTML={{ __html: content.html }} />
+
+        {/* Render CSV previews */}
+        {content.csvBlocks.map(block => (
+          <div key={block.id} className="my-4">
+            <CSVPreview url={block.url} title={block.title} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
+

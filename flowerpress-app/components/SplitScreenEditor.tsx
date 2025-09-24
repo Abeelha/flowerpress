@@ -161,16 +161,16 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
     >
       <div className="h-full flex flex-col">
       {/* Editor Toolbar */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">View:</span>
-          <div className="flex items-center gap-1 bg-white dark:bg-gray-700 rounded-lg p-1">
+          <span className="text-sm text-gray-600">View:</span>
+          <div className="flex items-center gap-1 bg-white rounded-lg p-1">
             <button
               onClick={() => setViewMode('rich')}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 viewMode === 'rich'
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               Rich
@@ -180,7 +180,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 viewMode === 'split'
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               Split
@@ -190,7 +190,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 viewMode === 'source'
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               Source
@@ -200,7 +200,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 viewMode === 'preview'
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               Preview
@@ -210,7 +210,7 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
         <div className="flex items-center gap-2">
           <button
             onClick={loadDocumentContent}
-            className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
             title="Reload content"
           >
             ↻
@@ -221,10 +221,10 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
       {/* Editor Content */}
       <div className="flex-1 min-h-0">
         {viewMode === 'rich' && (
-          <div className="h-full">
+          <div className="h-full bg-white">
             <ErrorBoundary>
               <BlockNoteEditor
-                key={document.id}
+                key={`${document.id}-rich`}
                 value={markdown}
                 onChange={handleMarkdownChange}
               />
@@ -234,23 +234,23 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
 
         {viewMode === 'split' && (
           <div className="h-full flex">
-            <div className="w-1/2 border-r border-gray-200 dark:border-gray-700">
+            <div className="w-1/2 border-r border-gray-200 bg-white">
               <CodeMirrorEditor
+                key={`${document.id}-split`}
                 value={markdown}
                 onChange={handleMarkdownChange}
               />
             </div>
-            <div className="w-1/2 overflow-y-auto">
-              <div className="p-4">
-                <MarkdownPreview markdown={markdown} />
-              </div>
+            <div className="w-1/2 overflow-y-auto bg-white">
+              <MarkdownPreview markdown={markdown} />
             </div>
           </div>
         )}
 
         {viewMode === 'source' && (
-          <div className="h-full">
+          <div className="h-full bg-white">
             <CodeMirrorEditor
+              key={`${document.id}-source`}
               value={markdown}
               onChange={handleMarkdownChange}
             />
@@ -258,10 +258,8 @@ export default function SplitScreenEditor({ spaceId, document, onDocumentUpdate 
         )}
 
         {viewMode === 'preview' && (
-          <div className="h-full overflow-y-auto">
-            <div className="p-4">
-              <MarkdownPreview markdown={markdown} />
-            </div>
+          <div className="h-full overflow-y-auto bg-white">
+            <MarkdownPreview markdown={markdown} />
           </div>
         )}
       </div>

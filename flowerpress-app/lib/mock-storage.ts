@@ -103,6 +103,16 @@ class MockStorageBackend implements StorageBackend {
     // Create a mock URL for the asset
     const url = URL.createObjectURL(file)
 
+    // For CSV files, store the content as well
+    let csvContent = null
+    if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+      try {
+        csvContent = await file.text()
+      } catch (error) {
+        console.error('Failed to read CSV content:', error)
+      }
+    }
+
     // Emit save event for display
     emitSaveEvent({
       timestamp: new Date(),
@@ -114,7 +124,8 @@ class MockStorageBackend implements StorageBackend {
         fileSize: file.size,
         path,
         url,
-        preview: file.type.startsWith('image/') ? url : null
+        preview: file.type.startsWith('image/') ? url : null,
+        csvContent
       }
     })
 

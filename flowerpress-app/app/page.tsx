@@ -7,7 +7,6 @@ import SaveDumpViewer from '@/components/SaveDumpViewer'
 import { useEditorStore } from '@/lib/store'
 import { editorAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
-import ThemeToggle from '@/components/ThemeToggle'
 import { Document } from '@/types'
 import Modal from '@/components/Modal'
 import ConfirmDialog from '@/components/ConfirmDialog'
@@ -117,15 +116,15 @@ The backend is completely mocked - all saves are logged and displayed so you can
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors">
+    <div className="flex h-screen bg-white">
       {/* Flowerpress Header */}
-      <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="w-64 flex-shrink-0 border-r border-gray-200 bg-gray-50">
+        <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="text-2xl">🌸</div>
             <div>
-              <h1 className="font-bold text-lg text-gray-900 dark:text-white">Flowerpress</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Headless Editor</p>
+              <h1 className="font-bold text-lg text-gray-900">Flowerpress</h1>
+              <p className="text-xs text-gray-500">Headless Editor</p>
             </div>
           </div>
         </div>
@@ -133,10 +132,10 @@ The backend is completely mocked - all saves are logged and displayed so you can
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Documents</h2>
+              <h2 className="text-sm font-semibold text-gray-700">Documents</h2>
               <button
                 onClick={() => setNewDocModal({ isOpen: true })}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                className="p-1 hover:bg-gray-200 rounded"
                 title="New document"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,8 +149,8 @@ The backend is completely mocked - all saves are logged and displayed so you can
               {documents.map(doc => (
                 <div
                   key={doc.id}
-                  className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer ${
-                    currentDoc?.id === doc.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                  className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer ${
+                    currentDoc?.id === doc.id ? 'bg-blue-50 text-blue-600' : ''
                   }`}
                   onClick={() => setCurrentDoc(doc)}
                 >
@@ -167,25 +166,24 @@ The backend is completely mocked - all saves are logged and displayed so you can
       </div>
 
       <div className="flex-1 flex flex-col">
-        <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3">
+        <header className="border-b border-gray-200 bg-white px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl font-bold text-gray-900">
                 {currentDoc?.title || 'No document selected'}
               </h1>
               {hasUnsavedChanges && !isSaving && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">• Unsaved changes</span>
+                <span className="text-sm text-gray-500">• Unsaved changes</span>
               )}
               {isSaving && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">• Saving...</span>
+                <span className="text-sm text-gray-500">• Saving...</span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <ThemeToggle />
               <button
                 onClick={handleSave}
                 disabled={!hasUnsavedChanges || isSaving || !currentDoc}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Save
               </button>
