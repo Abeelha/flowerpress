@@ -1,4 +1,4 @@
-# FlowerPress 🌸
+# Archived, alrd merged into https://github.com/flowershow/florist/pull/4
 
 A **Substack/Notion-style cloud editor for markdown-based [data-rich documents](https://datarichdocs.com/) and datasets** compatible with [Flowershow.app](https://flowershow.app).
 
